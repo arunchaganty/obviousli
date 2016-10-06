@@ -1,0 +1,48 @@
+#!/bin/bash
+
+source pull-dependencies.lib
+
+# get data.
+msg "Obtaining data."
+ensure_dir data;
+
+msg "RTE1"
+ensure_dir data/RTE1;
+download data/RTE1 http://nlp.stanford.edu/projects/contradiction/RTE1_dev1_3ways.xml
+download data/RTE1 http://nlp.stanford.edu/projects/contradiction/RTE1_dev2_3ways.xml
+download data/RTE1 http://nlp.stanford.edu/projects/contradiction/RTE1_test_3ways.xml
+
+msg "RTE2"
+ensure_dir data/RTE2;
+download data/RTE2 http://nlp.stanford.edu/projects/contradiction/RTE2_dev_3ways.xml
+download data/RTE2 http://nlp.stanford.edu/projects/contradiction/RTE2_test_3ways.xml
+download data/RTE2 http://nlp.stanford.edu/projects/contradiction/RTE2_dev_negated_contradiction.xml
+download data/RTE2 http://nlp.stanford.edu/projects/contradiction/RTE2_test_negated_contradiction.xml
+ 
+msg "RTE3"
+ensure_dir data/RTE3;
+download data/RTE3 http://nlp.stanford.edu/projects/contradiction/RTE3_dev_3ways.xml
+download data/RTE3 http://nlp.stanford.edu/projects/contradiction/RTE3_test_3ways.xml
+
+msg "RTE5"
+if [ ! -e data/RTE5 ]; then
+  warn "To obtain RTE5, please follow instructions at http://tac.nist.gov/data/"
+fi;
+
+msg "RTE6"
+if [ ! -e data/RTE6 ]; then
+  warn "To obtain RTE6, please follow instructions at http://tac.nist.gov/data/"
+fi;
+
+msg "RTE7"
+if [ ! -e data/RTE7 ]; then
+  warn "To obtain RTE7, please follow instructions at http://tac.nist.gov/data/"
+fi;
+
+msg "fracas"
+ensure_dir data/fracas;
+download data/fracas http://www-nlp.stanford.edu/~wcmac/downloads/fracas.xml
+
+msg "real-life"
+ensure_dir data/misc/real-life;
+download data/misc/real-life http://nlp.stanford.edu/projects/contradiction/real_contradiction.xml

@@ -1,0 +1,98 @@
+#!/bin/bash
+# vim:ft=sh 
+# Library to handle dependencies.
+
+function ensure_dir() {
+  if [ ! -e $1 ]; then
+    mkdir -p $1;
+  fi;
+}
+
+# Download file into lib (if not downloaded already).
+function download() {
+  destDir=$1
+  url=$2
+  ensure_dir $destDir;
+  if [ ! -e "${destDir}/$(basename $url)" ]; then
+    wget -c "${url}" -O "${destDir}/$(basename $url)" || exit 1;
+    success "Obtained $url."
+  else
+    success "$url already downloaded."
+  fi;
+}
+
+function debPackage() {
+  name=$1;
+  if `dpkg-query -p ${name} &> /dev/null`; then
+    success "$name already installed."
+  else
+    sudo apt-get install ${name} || exit 1
+    success "Installed package $name."
+  fi;
+}
+
+function pipPackage() {
+  name=$1;
+  if `pip list | grep ${name} &> /dev/null`; then
+    success "$name already installed."
+  else
+    pip install --user ${name} || exit 1
+    success "Installed package $name."
+  fi;
+}
+
+function gitClone() {
+  url=$1;
+  if [ -z $2 ]; then
+    git_dir=`basename $url .git`;
+  else
+    git_dir=$2; 
+  fi;
+  msg "Cloning $url into $git_dir";
+  if [ ! -e "${git_dir}" ]; then
+    git clone $url
+  else 
+    cd $git_dir;
+    git pull;
+    cd ..;
+  fi
+}
+
+BOLD='\033[1m'
+BLACK='\033[30;40m'
+RED='\033[31;40m'
+GREEN='\033[32;40m'
+YELLOW='\033[33;40m'
+BLUE='\033[34;40m'
+MAGENTA='\033[35;40m'
+CYAN='\033[36;40m'
+WHITE='\033[37;40m'
+END='\033[0m'
+
+# Echos a message ($1) in color ($2)
+function cecho () {
+  message=${1}   # Defaults to default message.
+  color=${2:-$BLACK}           # Defaults to black, if not specified.
+
+  echo -e "$BOLD"
+  echo -e "$color"
+  echo -e "$message"
+  tput 'sgr0'
+}  
+
+function msg() {
+  cecho "$1" $BLUE
+}
+
+function warn() {
+  cecho "$1" $YELLOW
+}
+
+function err() {
+  cecho "$1" $RED
+}
+
+function success() {
+  cecho "$1" $GREEN
+}
+

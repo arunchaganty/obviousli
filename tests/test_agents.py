@@ -8,6 +8,8 @@ from obviousli.agents import GiveUpAgent
 def test_give_up_agent():
     state = State("E=MC2", "Matter and energy are interchangable", Truth.TRUE, None)
     agent = GiveUpAgent()
-    action = agent.act(state)
+    actions = agent.act(state)
 
+    assert len(actions) == 1
+    action = actions[0]
     assert isinstance(action, GiveUpAction)

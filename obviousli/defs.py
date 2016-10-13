@@ -70,34 +70,38 @@ class Agent(ABC):
     @abstractmethod
     def act(self, state):
         """
-        TODO(chaganty): allow returning multiple best actions
-        @returns - the action an agent would take on this state.
+        @returns - an ordered sequence of actions that the agent would take on this state.
         """
-        pass
+        return []
 
 class Agenda(ABC):
     """
     An agenda handles sorting of states.
-    Has parameters to evaluate states.
+    Has parameters to evaluate (state,action)s.
     """
 
     def __init__(self, parameters):
         self.parameters = parameters
 
     def run(self, agent, state):
-        queue = [(0,state)]
+        if state.isEnd(): return state
+
+        queue = []
+        for action in agent.act(state):
+            heapq.heappush(queue, (self.score(state, action), (state, action)))
 
         while len(queue) > 0:
-            _, state = heapq.heappop(queue)
+            _, (state, action) = heapq.heappop(queue)
             # TODO(chaganty): store back-pointers.
-            state_ = agent.act(state)(state)
-            if state_.isEnd():
-                return state_
+            state = action(state)
+            if state.isEnd():
+                return state
 
-            heapq.heappush((self.score(state_), state_))
+            for action in agent.act(state):
+                heapq.heappush(queue, (self.score(state, action), (state, action)))
         return state
 
-    def score(self, state):
+    def score(self, state, action):
         """
         score a state to place on the agenda.
         """

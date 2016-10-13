@@ -12,5 +12,5 @@ class GiveUpAgent(Agent):
         super(GiveUpAgent, self).__init__([])
 
     def act(self, state):
-        return GiveUpAction()
+        return [GiveUpAction()]
 

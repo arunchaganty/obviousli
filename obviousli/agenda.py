@@ -8,6 +8,6 @@ from .defs import Agenda
 from .util import edit_distance
 
 class EditDistanceAgenda(Agenda):
-    def score(self, state):
+    def score(self, state, action):
         return edit_distance(state.source, state.target)
 

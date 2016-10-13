@@ -35,13 +35,20 @@ class State(object):
         self.representation = representation
 
     def __str__(self):
-        return "[S: {} -> {}{}]".format(self.source, self.truth, self.target)
+        return "{} -> {}{}".format(self.source, self.truth.sym(), self.target)
+
+    def __repr__(self):
+        return "[S: {}]".format(str(self))
 
     def isEnd(self):
         """
         @returns: true iff the source sentence is equivalent to the target.
         """
         return self.source == self.target
+
+    @classmethod
+    def new(cls, source, target):
+        return State(source, target, Truth.TRUE, None)
 
 class Action(ABC):
     """
@@ -58,6 +65,12 @@ class Action(ABC):
         """
         pass
 
+    def __str__(self):
+        return "{}".format(id(self))
+
+    def __repr__(self):
+        return "[{}: {}]".format(self.__class__.__name__, str(self))
+
 class Agent(ABC):
     """
     A reasoning agent.
@@ -67,12 +80,13 @@ class Agent(ABC):
     def __init__(self, parameters):
         self.parameters = parameters
 
-    @abstractmethod
-    def act(self, state):
+    def rerank(self, state, actions):
         """
+        @param state: current state
+        @param actions: list of valid actions to take
         @returns - an ordered sequence of actions that the agent would take on this state.
         """
-        return []
+        return actions
 
 class Agenda(ABC):
     """
@@ -80,24 +94,26 @@ class Agenda(ABC):
     Has parameters to evaluate (state,action)s.
     """
 
-    def __init__(self, parameters):
+    def __init__(self, parameters, action_generator=lambda _: []):
         self.parameters = parameters
+        self.action_generator = action_generator
 
     def run(self, agent, state):
         if state.isEnd(): return state
 
         queue = []
-        for action in agent.act(state):
+        for action in agent.rerank(state, self.action_generator(state)):
             heapq.heappush(queue, (self.score(state, action), (state, action)))
 
         while len(queue) > 0:
+            print(queue)
             _, (state, action) = heapq.heappop(queue)
             # TODO(chaganty): store back-pointers.
             state = action(state)
             if state.isEnd():
                 return state
 
-            for action in agent.act(state):
+            for action in agent.rerank(state, self.action_generator(state)):
                 heapq.heappush(queue, (self.score(state, action), (state, action)))
         return state
 

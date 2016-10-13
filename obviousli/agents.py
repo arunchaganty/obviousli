@@ -11,6 +11,6 @@ class GiveUpAgent(Agent):
     def __init__(self):
         super(GiveUpAgent, self).__init__([])
 
-    def act(self, state):
+    def rerank(self, state, actions):
         return [GiveUpAction()]
 

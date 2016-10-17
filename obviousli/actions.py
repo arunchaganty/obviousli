@@ -19,9 +19,7 @@ class GiveUpAction(Action):
         return isinstance(other, GiveUpAction)
 
     def __call__(self, state):
-        state.source = state.target
-        state.truth = Truth.NEUTRAL
-        return state
+        return state.replace(source=state.target, truth=Truth.NEUTRAL, previous_state_action=(state, self))
 
     def __str__(self):
         return "GiveUp()"
@@ -63,9 +61,11 @@ class LexicalParaphrase(Action):
 
     def __call__(self, state):
         if self.apply_on_source:
-            state.source = state.source[:self.match_idx] + self.output + state.source[self.match_idx + len(self.input):]
+            new_ = state.source[:self.match_idx] + self.output + state.source[self.match_idx + len(self.input):]
+            return state.replace(source=new_, previous_state_action=(state, self))
         else:
-            state.target = state.target[:self.match_idx] + self.output + state.target[self.match_idx + len(self.input):]
+            new_ = state.target[:self.match_idx] + self.output + state.target[self.match_idx + len(self.input):]
+            return state.replace(target=new_, previous_state_action=(state, self))
         return state
 
 class LexicalParaphraseTemplate(ActionTemplate):
@@ -97,13 +97,15 @@ class ActionGenerator(object):
     actions given resources.
     """
 
-    def __init__(self, templates):
+    def __init__(self, templates, fixed_actions=None):
         #: A sequence of action templates
         self._templates = templates
+        self._fixed_actions = fixed_actions
 
     def __call__(self, state):
-        yield GiveUpAction()
         for template in self._templates:
             yield from template.generate(state)
+        if self._fixed_actions:
+            yield from self._fixed_actions
 
 # - PhraseParaphrase

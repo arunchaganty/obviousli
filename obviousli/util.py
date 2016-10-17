@@ -26,3 +26,9 @@ def edit_distance(l1, l2):
         previous_row = current_row
 
     return previous_row[-1]
+
+def normalized_edit_distance(l1, l2):
+    """
+    @returns: `edit_distance` normalized by length of input (lies between 0, 1).
+    """
+    return edit_distance(l1, l2) / max(len(l1), len(l2))

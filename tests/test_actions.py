@@ -11,7 +11,7 @@ def test_give_up_action():
 
     assert state_.source == "Matter and energy are interchangable"
     assert state_.isEnd()
-    assert state.truth == Truth.NEUTRAL
+    assert state_.truth == Truth.NEUTRAL
 
 def test_lexical_paraphrase():
     state = State("Obama shouted at the speaker.", "Obama screamed at the speaker.", Truth.TRUE, None)

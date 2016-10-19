@@ -1,0 +1,130 @@
+-
+  source: The sale was made to pay Yukos' US$ 27.5 billion tax bill, Yuganskneftegaz was originally sold for US$ 9.4 billion to a little known company Baikalfinansgroup which was later bought by the Russian state-owned oil company Rosneft.
+  steps:
+    - Yuganskneftegaz was originally sold for US$ 9.4 billion to a little known company Baikalfinansgroup which was later bought by the Russian state-owned oil company Rosneft. (dropping ccomp-head)
+    - a little known company Baikalfinansgroup which was later bought by the Russian state-owned oil company Rosneft. (restricting to nmod-tail)
+    - a company Baikalfinansgroup which was later bought by the Russian state-owned oil company Rosneft. (dropping amod-head)
+    - a company Baikalfinansgroup which was later bought by the oil company Rosneft. (dropping amod-head)
+    - a company Baikalfinansgroup which was bought by the oil company Rosneft. (dropping advmod-head)
+    - Baikalfinansgroup was bought by the oil company Rosneft. (a TYPE NNP which was -> NNP)
+    - Baikalfinansgroup was bought by Rosneft. (dropping discourse 'the oil company')
+    - *Baikalfinansgroup was sold to Rosneft. (bought by -> sold to)
+  target: Baikalfinansgroup was sold to Rosneft.
+
+-
+  source: The sale was made to pay Yukos' US$ 27.5 billion tax bill, Yuganskneftegaz was originally sold for US$9.4 billion to a little known company Baikalfinansgroup which was later bought by the Russian state-owned oil company Rosneft.
+  steps:
+    - Yuganskneftegaz was originally sold for US$9.4 billion to a little known company Baikalfinansgroup which was later bought by the Russian state-owned oil company Rosneft. (dropping ccomp-head)
+    - Yuganskneftegaz was originally sold for US$9.4 billion. (dropping nmod-tail)
+    - Yuganskneftegaz was sold for US$9.4 billion. (dropping advmod)
+    - Yuganskneftegaz cost US$9.4 billion. (was sold for -> cost)
+    - !Yuganskneftegaz cost US$ 27.5 billion. (US$9.4 billion != US$ 27.5 billion)
+  target: Yuganskneftegaz cost US$ 27.5 billion.
+
+- 
+  source: Loraine besides participating in Broadway's Dreamgirls, also participated in the Off-Broadway production of "Does A Tiger Have A Necktie". In 1999, Loraine went to London, United Kingdom. There she participated in the production of "RENT" where she was cast as "Mimi" the understudy.
+  steps: 
+    - ?"Does A Tiger Have A Necktie" was produced in London. (UNKNOWN)
+  target: "Does A Tiger Have A Necktie" was produced in London.
+  notes: There is no way to reach this example.
+
+-
+  source: "The Extra Girl" (1923) is a story of a small-town girl, Sue Graham (played by Mabel Normand) who comes to Hollywood to be in the pictures. This Mabel Normand vehicle, produced by Mack Sennett, followed earlier films about the film industry and also paved the way for later films about Hollywood, such as King Vidor's "Show People" (1928).
+  steps:
+    - This Mabel Normand vehicle, produced by Mack Sennett, followed earlier films about the film industry and also paved the way for later films about Hollywood, such as King Vidor's "Show People" (1928). (drop 1st sentence)
+    - This Mabel Normand vehicle was produced by Mack Sennett. (appositive)
+    - "The Extra Girl" was produced by Mack Sennett. (magic-coref)
+    - *"The Extra Girl" was produced by Sennett. (coref)
+  target: "The Extra Girl" was produced by Sennett.
+
+- 
+  source: A bus collision with a truck in Uganda has resulted in at least 30 fatalities and has left a further 21 injured.
+  steps:
+    - A bus collision with a truck in Uganda has resulted in at least 30 fatalities. (dropping cc)
+    - A bus collision in Uganda has resulted in at least 30 fatalities. (dropping nmod)
+    - A bus collision in Uganda has resulted in at least 30 dead. (fatalities -> dead)
+    - A bus collision in Uganda resulted in at least 30 dead. (dropping aux)
+    - At least 30 die in a bus collision in Uganda. (denominalization).
+    - *30 die in a bus collision in Uganda. (at least 30 -> 30 (natlog)).
+  target: 30 die in a bus collision in Uganda.
+
+-
+  source: Take consumer products giant Procter and Gamble. Even with a $1.8 billion Research and Development budget, it still manages 500 active partnerships each year, many of them with small companies.
+  steps:
+    - Even with a $1.8 billion Research and Development budget, it still manages 500 active partnerships each year, many of them with small companies. (drop sentence 1)
+    - It still manages 500 active partnerships each year, many of them with small companies. (drop advcl-head)
+    - Procter and Gamble still manages 500 active partnerships each year, many of them with small companies. (coref)
+    - Procter and Gamble manages 500 active partnerships each year, many of them with small companies. (drop advmod)
+    - Procter and Gamble manages 500 active partnerships each year with many of them being small companies. (appositive)
+    - Procter and Gamble manages 500 active partnerships each year with small companies. (many of <- []; now in false state; using pragmatics)
+    - Procter and Gamble manages 500 active partnerships with small companies. (drop dep)
+    - Procter and Gamble manages 500 partnerships with small companies. (drop amod)
+    - 500 small companies partner with Procter and Gamble. (denominalizaton)
+    - 500 small companies are partners with Procter and Gamble. (nominalizaton)
+    - !500 small companies are partners of Procter and Gamble. (with -> of)
+  target: 500 small companies are partners of Procter and Gamble.
+
+- 
+  source: After his release, the clean-shaven Magdy el-Nashar told reporters outside his home that he had nothing to do with the July 7 transit attacks, which killed 52 people and the four bombers.
+  steps:
+    - the clean-shaven Magdy el-Nashar told reporters outside his home that he had nothing to do with the July 7 transit attacks, which killed 52 people and the four bombers. (dropping ccomp)
+    - the July 7 transit attacks, which killed 52 people and the four bombers. (dropping nmod head)
+    - the July 7 transit attacks killed 52 people and the four bombers. (appositive (through acl))
+    - the transit attacks on July 7 killed 52 people and the four bombers. (breaking compound)
+    - 52 people and the four bombers were killed by the transit attacks on July 7. (active -> passive)
+    - 52 people and the four bombers were killed on July 7. (dropping nmod-date)
+    - *52 people and four bombers were killed on July 7. (dropping determiner)
+  target: 52 people and four bombers were killed on July 7.
+
+- 
+  source: Mrs. Bush's approval ratings have remained very high, above 80%, even as her husband's have recently dropped below 50%.
+  steps:
+    - ? 80% approve of Mr. Bush. (can't disprove directly.)
+  alternate-steps:
+    - Mrs. Bush's approval ratings have remained very high, above 80%. (dropping nmod)
+    - Mrs. Bush's approval ratings have remained above 80%. (appositive (advmod -- nmod))
+    - above 80% approve of  Mrs. Bush. (denominalization)
+    - 80% approve of  Mrs. Bush. (above 80% => 80%))
+    - !80% approve of  Mr. Bush. (Mrs. | Mr.)
+  target: 80% approve of Mr. Bush.
+
+-
+  source: Recent Dakosaurus research comes from a complete skull found in Argentina in 1996, studied by Diego Pol of Ohio State University, Zulma Gasparini of Argentinas National University of La Plata, and their colleagues.
+  steps:
+    - Recent Dakosaurus research comes from a complete skull found in Argentina in 1996, studied by Diego Pol of Ohio State University. (dropping cc)
+    - Recent Dakosaurus research comes from a complete skull found in Argentina in 1996, studied by Diego Pol. (dropping nmod)
+    - Recent Dakosaurus research comes from a complete skull, studied by Diego Pol. (dropping acl)
+    - Recent Dakosaurus research comes from a complete Dakosaurus skull, studied by Diego Pol. (*adding noun in context)
+    - Diego Pol studied a complete Dakosaurus skull. (pivoting around acl)
+    - A complete Dakosaurus skull was studied by Diego Pol. (active -> passive)
+    - A complete Dakosaurus skull was discovered by Diego Pol. (studied ~ discovered)
+    - ? A complete Dakosaurus was discovered by Diego Pol. (inverse part-of relation) 
+  target: A complete Dakosaurus was discovered by Diego Pol.
+
+-
+  source: On May 17, 2005, the National Assembly of Kuwait passed, by a majority of 35 to 23 (with 1 abstention), an amendment to its electoral law that would allow women to vote and to stand as parliamentary candidates.
+  steps:
+    - ? A pro-women amendment was rejected by the National Assembly of Kuwait. (impossible to paraphrase to pro-women)
+  target: A pro-women amendment was rejected by the National Assembly of Kuwait.
+
+-
+  source: I recently took a round trip from Abuja to Yola, the capital of Adamawa State and back to Abuja, with a fourteen-seater bus.
+  steps:
+    - I recently took a round trip from Abuja to Yola, the capital of Adamawa State (dropping cc)
+    - Yola, the capital of Adamawa State (selecting nmod)
+    - Yola is the capital of Adamawa State (appositive)
+    - Yola is located in Adamawa State (the capital of -> located in)
+    - ? Abuja is located in Adamawa State. (Yola # Abuja)
+  target: Abuja is located in Adamawa State.
+
+-
+  source: Accardo founded the Settimane Musicali Internazionali in Naples and the Cremona String Festival in 1971, and in 1996, he re-founded the Orchestra da Camera Italiana (O.C.I.), whose members are the best pupils of the Walter Stauffer Academy.
+  steps:
+    - he re-founded the Orchestra da Camera Italiana (O.C.I.), whose members are the best pupils of the Walter Stauffer Academy. (take conj)
+    - Orchestra da Camera Italiana (O.C.I.) 's members are the best pupils of the Walter Stauffer Academy. (acl:relcl)
+    - Orchestra da Camera Italiana (O.C.I.)'s members are the pupils of the Walter Stauffer Academy. (drop amod)
+    - Orchestra da Camera Italiana (O.C.I.)'s members are members of the Walter Stauffer Academy. (pupils -> members)
+    - Accardo is a member of the Walter Stauffer Academy. (Accardo # Orchestra da Camera Italiana (O.C.I.)'s members)
+    - ? Accardo was a member of the Walter Stauffer Academy. (tense-change)
+  target: Accardo was a member of the Walter Stauffer Academy.
+

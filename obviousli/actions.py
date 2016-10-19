@@ -36,8 +36,27 @@ class ActionTemplate(object):
         """
         return ()
 
+class ActionGenerator(object):
+    """
+    The action generator is responsible for generating all possible
+    actions given resources.
+    """
+
+    def __init__(self, templates, fixed_actions=None):
+        #: A sequence of action templates
+        self._templates = templates
+        self._fixed_actions = fixed_actions
+
+    def __call__(self, state):
+        for template in self._templates:
+            yield from template.generate(state)
+        if self._fixed_actions:
+            yield from self._fixed_actions
+
 # TODO(chaganty): implement the following actions.
 #     - Guess
+# TODO(chaganty): allow the gradient to pass into the Guess action.
+
 #     - LexicalParaphrase
 class LexicalParaphrase(Action):
     """
@@ -90,22 +109,5 @@ class LexicalParaphraseTemplate(ActionTemplate):
             idx = state.target.find(self.input, start)
             yield LexicalParaphrase(self.input, self.output, apply_on_source=False, match_idx=idx)
             start = idx+1
-
-class ActionGenerator(object):
-    """
-    The action generator is responsible for generating all possible
-    actions given resources.
-    """
-
-    def __init__(self, templates, fixed_actions=None):
-        #: A sequence of action templates
-        self._templates = templates
-        self._fixed_actions = fixed_actions
-
-    def __call__(self, state):
-        for template in self._templates:
-            yield from template.generate(state)
-        if self._fixed_actions:
-            yield from self._fixed_actions
 
 # - PhraseParaphrase

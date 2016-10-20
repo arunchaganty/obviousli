@@ -4,21 +4,28 @@
 Simple inferences
 """
 
-from obviousli.defs import State, Truth, Agent, AgendaEnvironment, ActorModel, CriticModel
+from obviousli.defs import State, Truth, Agent, AgendaEnvironment
+from obviousli.models import ActorModel, CriticModel
 from obviousli.actions import GiveUpAction, ActionGenerator, LexicalParaphraseTemplate
 from obviousli.util import normalized_edit_distance
 
 class MockActorModel(ActorModel):
-    def _predict(self, state, action):
+    def __init__(self):
+        super(MockActorModel, self).__init__(input=[], output=[])
+        
+    def predict(self, state, action):
         if isinstance(action, GiveUpAction):
-            return -1
+            return -1.
         else:
-            return 0
+            return 0.
 
     def update(self):
         return
 
 class MockCriticModel(CriticModel):
+    def __init__(self):
+        super(MockCriticModel, self).__init__(input=[], output=[])
+
     def predict(self, state):
         if state.truth == Truth.NEUTRAL:
             return -1.

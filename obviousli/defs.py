@@ -80,14 +80,12 @@ class State(object):
                 source=None,
                 target=None,
                 truth=None,
-                representation=None,
                 gold_truth=None,
                 previous_state_action=None):
         return State(
             source or self.source,
             target or self.target,
             truth or self.truth,
-            representation or self.representation,
             gold_truth or self.gold_truth,
             previous_state_action or self.previous_state_action)
 
@@ -111,64 +109,6 @@ class Action(ABC):
 
     def __repr__(self):
         return "[{}: {}]".format(self.__class__.__name__, str(self))
-
-class Model(ABC):
-    """
-    Types (generic): I -> J
-    A model has two views: a test and train view.
-    Test: a model predicts probability of type J given an element of type I.
-    Train: a model stores a list of training examples that can be enqueued by anyone.
-           Furthermore, the model can be "updated" to learn on these training examples.
-    """
-    def __init__(self):
-        self.queue = []
-
-    @abstractmethod
-    def predict(self, example):
-        """
-        @example - a d-dimensional vector input to the model.
-        @returns a distribution over outputs.
-        """
-        pass
-
-    def enqueue(self, example):
-        """
-        Appends @example to list of elements to be queued.
-        @example - a tuple of (input, output)
-        """
-        self.queue.append(example)
-
-    @abstractmethod
-    def update(self):
-        """
-        Updates parameters of model.
-        """
-        pass
-
-class ActorModel(Model):
-    """
-    Type signature: state, action -> value 
-    """
-    def predict(self, example):
-        state, action = example
-        return self._predict(state, action)
-
-    @abstractmethod
-    def _predict(self, state, action):
-        pass
-
-    def enqueue(self, example):
-        """
-        @example: is a ((state, action), reward_signal) triple.
-        """
-        assert len(example) == 2 and len(example[0]) == 2, "invalid training example"
-        super(ActorModel, self).enqueue(example)
-
-class CriticModel(Model):
-    """
-    Type signature: state -> value.
-    """
-    pass
 
 class Agent(object):
     """
@@ -253,7 +193,9 @@ class AgendaEnvironment(ABC):
                 reward = self.reward_fn(state_)
                 self.logger.info("Adding to agenda: (%.2f) %s -> %s (reward=%.2f)", value_, action, state_, reward)
 
-                #self.critic_model.enqueue(((state, value), (reward + self.gamma * value_)))
+                reward_ = value_
+                reward_ += self.gamma * reward
+                self.critic_model.enqueue(((state, action, state_, value, reward), reward_))
                 self.agent.incorporate_feedback(state, action, value_ - value) # this is the TD-update
         return state
 

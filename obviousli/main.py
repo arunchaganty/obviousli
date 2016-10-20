@@ -9,7 +9,7 @@ import sys
 
 from .defs import Agenda, State, Agent
 from .actions import ActionGenerator, LexicalParaphraseTemplate
-from .models import LexicalModel
+from .models.LexicalModel import LexicalModel
 
 def printq(queue):
     for score, (state, action) in queue:

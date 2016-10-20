@@ -6,7 +6,10 @@ Top-level definitions.
 from enum import Enum
 import heapq
 from abc import ABC, abstractmethod
+from stanza.nlp.corenlp import CoreNLPClient, AnnotatedSentence
 import logging
+
+import obviousli.config as config
 
 class Truth(Enum):
     FALSE=-1
@@ -31,13 +34,12 @@ class State(object):
     """
     Represents inference state, with source and target sentences and arbitrary representation.
     """
+    _client = CoreNLPClient(server=config.CORENLP_SERVER, default_annotators=config.CORENLP_ANNOTATORS)
 
-    def __init__(self, source, target, truth, representation, gold_truth=None, previous_state_action=None):
+    def __init__(self, source, target, truth, gold_truth=None, previous_state_action=None):
         self.source = source
         self.target = target
         self.truth = truth
-        # TODO: we'll be generating these representations soon...
-        self.representation = representation
         self.gold_truth = gold_truth
         self.previous_state_action = previous_state_action # to maintain a backpointer.
 
@@ -55,6 +57,11 @@ class State(object):
         else:
             return self.truth < other.truth
 
+    @property
+    def representation(self):
+        # TODO: generate these representations.
+        return None
+
     def isEnd(self):
         """
         @returns: true iff the source sentence is equivalent to the target.
@@ -63,7 +70,11 @@ class State(object):
 
     @classmethod
     def new(cls, source, target, gold_truth=None):
-        return State(source, target, Truth.TRUE, None, gold_truth=gold_truth)
+        source = cls._client.annotate(source)[0]
+        target = cls._client.annotate(target)[0]
+        assert isinstance(source, AnnotatedSentence)
+        assert isinstance(target, AnnotatedSentence)
+        return State(source, target, Truth.TRUE, gold_truth=gold_truth)
 
     def replace(self, 
                 source=None,
@@ -242,7 +253,7 @@ class AgendaEnvironment(ABC):
                 reward = self.reward_fn(state_)
                 self.logger.info("Adding to agenda: (%.2f) %s -> %s (reward=%.2f)", value_, action, state_, reward)
 
-                self.critic_model.enqueue(((state, value), (reward + self.gamma*value_)))
+                #self.critic_model.enqueue(((state, value), (reward + self.gamma * value_)))
                 self.agent.incorporate_feedback(state, action, value_ - value) # this is the TD-update
         return state
 

@@ -5,7 +5,7 @@ Definitions of standard actions
 """
 
 from abc import abstractmethod
-from .defs import State, Action, Truth
+from obviousli.defs import State, Action, Truth
 
 class GiveUpAction(Action):
     """

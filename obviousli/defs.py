@@ -12,9 +12,9 @@ import logging
 import obviousli.config as config
 
 class Truth(Enum):
-    FALSE=-1
-    NEUTRAL=0
-    TRUE=1
+    FALSE=0
+    NEUTRAL=1
+    TRUE=2
 
     def sym(self):
         """

@@ -8,9 +8,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import numpy
 import numpy as np
-from keras.models import model_from_json
 from keras.layers import Input, Dense
 
 from . import EntailmentModel
@@ -37,11 +35,11 @@ class LexicalModel(EntailmentModel):
 
     def encode_state(self, state):
         M, L = self.word_map, len(self.word_map)
-        return [M[str(t1)]*L + M[str(t2)] for t1 in state.source.tokens for t2 in state.target.tokens]
+        return [M[t1.word]*L + M[t2.word] for t1 in state.source.tokens for t2 in state.target.tokens]
 
     def predict(self, state):
-        L = len(self.word_map) * len(self.word_map) 
-        x = numpy.zeros((1,L))
+        L = len(self.word_map) * len(self.word_map)
+        x = np.zeros((1,L))
         x[:,self.encode_state(state)] = 1
 
         # Need to project tokens into vectors.

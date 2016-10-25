@@ -19,6 +19,7 @@ def backend():
     A wrapper around the keras backend that properly deletes the
     tensorflow session after running.
     """
+    # TODO(chaganty): This still doesn't fix the problem.
     if K.backend() == "tensorflow":
         import tensorflow as tf
         sess = tf.Session()

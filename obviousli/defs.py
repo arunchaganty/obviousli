@@ -3,11 +3,12 @@
 """
 Top-level definitions.
 """
-from enum import Enum
 import heapq
-from abc import ABC, abstractmethod
-from stanza.nlp.corenlp import CoreNLPClient, AnnotatedSentence
 import logging
+from enum import Enum
+from abc import ABC, abstractmethod
+
+from stanza.nlp.corenlp import CoreNLPClient, AnnotatedSentence
 
 import obviousli.config as config
 
@@ -56,6 +57,16 @@ class State(object):
             return self.target < other.target
         else:
             return self.truth < other.truth
+
+    @classmethod
+    def from_json(cls, obj):
+        source = AnnotatedSentence.from_json(obj["source"])
+        target = AnnotatedSentence.from_json(obj["target"])
+        truth = Truth(obj["truth"])
+        gold_truth = obj["gold_truth"] and Truth(obj["gold_truth"])
+        # TODO(chaganty): how to serialize previous_state_action?
+        previous_state_action = None
+        return State(source, target, truth, gold_truth, previous_state_action)
 
     @property
     def representation(self):

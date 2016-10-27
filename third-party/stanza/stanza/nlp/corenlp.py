@@ -357,6 +357,18 @@ class AnnotatedSentence(Sentence, ProtobufBacked):
         sentence_pb.tokenOffsetBegin = 0
         sentence_pb.tokenOffsetEnd = len(toks)
 
+        TOK_MAP = {
+            "``" : '"',
+            "''" : '"',
+            "-LRB-" : '(',
+            "-RRB-" : ')',
+            "-LSB-" : '[',
+            "-RSB-" : ']',
+            "-LCB-" : '{',
+            "-RCB-" : '}',
+            }
+        # TODO: handle ` -> ' only sometimes.
+
         # Track progress in sentence and tokens.
         char_idx = 0
         tok_idx = 0
@@ -364,28 +376,29 @@ class AnnotatedSentence(Sentence, ProtobufBacked):
         buf = ""
         token_pb = None
         while char_idx < len(text):
+            assert tok_idx < len(toks), "text has more tokens than input"
             tok = toks[tok_idx]
+            tok_text = TOK_MAP.get(tok, tok)
             # Scan to the beginning of the token.
-            if text[char_idx] != tok[0]:
+            if text[char_idx] != tok_text[0]:
                 buf += text[char_idx]
                 char_idx += 1
             # Aha! we have found the token. Assert that they match.
             else:
-                assert text[char_idx:char_idx+len(tok)] == tok, "text did not match a token"
+                assert text[char_idx:char_idx+len(tok_text)] == tok_text, "text did not match a token"
                 # Create a new Token from this text.
                 if token_pb: token_pb.after = buf
                 token_pb = sentence_pb.token.add()
                 token_pb.before = buf
 
                 token_pb.beginChar = char_idx
-                token_pb.endChar = char_idx + len(tok)
-                # TODO(chaganty): potentially handle -LRB-?
+                token_pb.endChar = char_idx + len(tok_text)
                 token_pb.value = tok
                 token_pb.word = tok
-                token_pb.originalText = text[char_idx:char_idx+len(tok)]
+                token_pb.originalText = text[char_idx:char_idx+len(tok_text)]
 
                 buf = ""
-                char_idx += len(tok)
+                char_idx += len(tok_text)
                 tok_idx += 1
         if token_pb: token_pb.after = buf
         assert tok_idx == len(toks), "text does not match all tokens"

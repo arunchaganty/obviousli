@@ -6,19 +6,19 @@ The obviousli inference system.
 
 import csv
 import sys
-from importlib import import_module
-from collections import namedtuple
+import json
 import logging
 import logging.config
+from collections import namedtuple
 
 import ipdb
 import numpy as np
 from tqdm import tqdm
 
+import obviousli.models
 from obviousli.defs import AgendaEnvironment, State, Agent, Truth
 from obviousli.actions import ActionGenerator, LexicalParaphraseTemplate
-from obviousli.models.LexicalModel import LexicalModel
-from obviousli.util import ConfusionMatrix
+from obviousli.util import ConfusionMatrix, grouper
 
 
 def printq(queue):
@@ -75,41 +75,43 @@ def load_data(fstream):
 
 def evaluate(model, data):
     cm = ConfusionMatrix([t.name for t in Truth])
-    for state in data:
-        y_ = model.predict(state)
-        cm.update(state.gold_truth.value, np.argmax(y_))
+    for batch in tqdm(grouper(100, data), total=int(len(data)/100)):
+        ys_ = model.predict_on_state_batch(batch)
+        ys = (state.gold_truth.value for state in batch)
+        for y, y_ in zip(ys, ys_): cm.update(y, np.argmax(y_))
     cm.print_table()
     cm.summary()
     return cm
 
 def get_model_factory(model):
     """import model"""
-    return getattr(import_module('obviousli.models.{0}'.format(model)), model)
+    return getattr(obviousli.models, model)
 
 def do_model_train(args):
     """
     Train the model specified.
     """
-    train_data = [State.new(row.source, row.target, gold_truth=Truth(int(row.gold_truth))) for row in tqdm(list(load_data(args.train_data)))]
-    dev_data = [State.new(row.source, row.target, gold_truth=Truth(int(row.gold_truth))) for row in tqdm(list(load_data(args.dev_data)))]
-
-    words = set([])
-    for state in train_data:
-        words.update(tok.word for tok in state.source.tokens)
-        words.update(tok.word for tok in state.target.tokens)
-    for state in dev_data:
-        words.update(tok.word for tok in state.source.tokens)
-        words.update(tok.word for tok in state.target.tokens)
-
-    word_map = {word : i for i, word in enumerate(sorted(words))}
+    # [State.new(row.source, row.target, gold_truth=Truth(int(row.gold_truth))) for row in tqdm(list(load_data(args.train_data)))]
+    logging.info("Loading training data.")
+    train_data = [State.from_json(json.loads(line)) for line in tqdm(list(args.train_data))]
+    logging.info("Loading dev data.")
+    dev_data = [State.from_json(json.loads(line)) for line in tqdm(list(args.dev_data))]
 
     # Get model
     Model = get_model_factory(args.entailment_model)
-    model = Model.build(word_map)
+    # Get embedder
+    embedder = Model.embedder().construct(train_data + dev_data)
+    for state in train_data + dev_data: state.representation = embedder.embed(state)
+    input_length = max(len(state.representation) for state in train_data + dev_data)
+    for state in train_data + dev_data: state.representation = state.representation[:input_length] + [0] * max(0, input_length - len(state.representation))
+    # Now adjust lengths
+
+    model = Model.build(vocab_size=len(embedder.word_map), input_length=input_length)
     model.compile(
         optimizer='adagrad',
         loss='categorical_crossentropy',
         metrics=['accuracy'])
+
 
     for epoch in range(args.n_epochs):
         logging.info("Epoch %d", epoch)
@@ -119,7 +121,9 @@ def do_model_train(args):
         model.update()
         model.save(args.model_path)
         # evaluate.
+        logging.info("Evaluating model on train...")
         evaluate(model, train_data)
+        logging.info("Evaluating model on dev...")
         evaluate(model, dev_data)
 
 def do_model_evaluate(args):
@@ -127,16 +131,15 @@ def do_model_evaluate(args):
     Evaluate the model specified.
     """
     model = get_model_factory(args.entailment_model).load(args.model_path)
-    eval_data = [State.new(row.source, row.target, gold_truth=row.gold_truth) for row in tqdm(list(load_data(args.eval_data)))]
-
+    eval_data = [State.from_json(json.loads(line) for line in tqdm(args.data))]
+    logging.info("Evaluating model...")
     evaluate(model, eval_data)
 
-
-logging.config.fileConfig('logging_config.ini')
 if __name__ == "__main__":
+    logging.config.fileConfig('logging_config.ini')
     import argparse
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--entailment-model', choices=["LexicalModel"], default="LexicalModel", help="Which entailment model to use?")
+    parser.add_argument('--entailment-model', choices=["LexicalCrossUnigramModel"], default="LexicalCrossUnigramModel", help="Which entailment model to use?")
     parser.add_argument('--model_path', default="out", help="Where to load/save models.")
     parser.set_defaults(func=None)
 

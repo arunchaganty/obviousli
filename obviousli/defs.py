@@ -43,6 +43,7 @@ class State(object):
         self.truth = truth
         self.gold_truth = gold_truth
         self.previous_state_action = previous_state_action # to maintain a backpointer.
+        self.representation = None
 
     def __str__(self):
         return "{} -> {}{}".format(self.source, self.truth.sym(), self.target)
@@ -58,20 +59,24 @@ class State(object):
         else:
             return self.truth < other.truth
 
+    @property
+    def json(self):
+        return {
+            'source' : self.source.json,
+            'target' : self.target.json,
+            'truth' : self.truth.value,
+            'gold_truth' : self.gold_truth.value,
+            }
+
     @classmethod
     def from_json(cls, obj):
         source = AnnotatedSentence.from_json(obj["source"])
         target = AnnotatedSentence.from_json(obj["target"])
         truth = Truth(obj["truth"])
-        gold_truth = obj["gold_truth"] and Truth(obj["gold_truth"])
+        gold_truth = obj["gold_truth"] is not None and Truth(obj["gold_truth"])
         # TODO(chaganty): how to serialize previous_state_action?
         previous_state_action = None
         return State(source, target, truth, gold_truth, previous_state_action)
-
-    @property
-    def representation(self):
-        # TODO: generate these representations.
-        return None
 
     def isEnd(self):
         """

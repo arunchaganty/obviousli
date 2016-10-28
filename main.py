@@ -101,16 +101,17 @@ def do_model_train(args):
     Model = get_model_factory(args.entailment_model)
     # Get embedder
     embedder = Model.embedder().construct(train_data + dev_data)
-    for state in train_data + dev_data: state.representation = embedder.embed(state)
-    input_length = max(len(state.representation) for state in train_data + dev_data)
-    for state in train_data + dev_data: state.representation = state.representation[:input_length] + [0] * max(0, input_length - len(state.representation))
-    # Now adjust lengths
+    logging.info("Embeddeding data.")
+    for state in tqdm(train_data + dev_data): 
+        rep = embedder.embed(state)
+        state.representation = rep[:args.input_length] + [0] * max(0, args.input_length - len(rep))
 
-    model = Model.build(vocab_size=len(embedder.word_map), input_length=input_length)
+    model = Model.build(vocab_size=len(embedder.word_map), input_length=args.input_length)
     model.compile(
         optimizer='adagrad',
         loss='categorical_crossentropy',
         metrics=['accuracy'])
+    logging.info("Model: %s", model.summary())
 
 
     for epoch in range(args.n_epochs):
@@ -145,6 +146,7 @@ if __name__ == "__main__":
 
     subparsers = parser.add_subparsers()
     command_parser = subparsers.add_parser('model-train', help='Train a component model.')
+    command_parser.add_argument('--input_length', type=int, default=200, help="Longest accepted sequence")
     command_parser.add_argument('--train_data', type=argparse.FileType('r'), required=True, help='A training dataset with (s1, s2, label) tuples.')
     command_parser.add_argument('--dev_data', type=argparse.FileType('r'), required=True, help='A training dataset with (s1, s2, label) tuples.')
     command_parser.add_argument('--n_epochs', type=int, default=10, help='A training dataset with (s1, s2, label) tuples.')

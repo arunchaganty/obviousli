@@ -170,3 +170,47 @@ class LexicalCrossUnigramModel(EntailmentModel):
         z = Flatten()(z)
         z = Activation(output_type)(z)
         return LexicalCrossUnigramModel(input=[x], output=[z], **kwargs)
+
+class CrossUnigramModel(EntailmentModel):
+    def __init__(self, *args, **kwargs):
+        super(LexicalCrossUnigramModel, self).__init__(*args, **kwargs)
+
+    @classmethod
+    def embedder(cls):
+        return CrossUnigramEmbedder
+
+    @classmethod
+    def build(cls, **kwargs):
+        """
+        Construct model to take as input a sparse vector of integers
+        (corresponding to cross-unigrams).
+        Maps to an output space of 3.
+        """
+        input_length = kwargs['input_length']
+        emb_matrix = kwargs.pop('emb_matrix')
+        vocab_size, emb_dim = emb_matrix.shape
+        output_type = 'softmax'
+        output_shape = cls.output_shape
+
+        # These are two input sentences (source, target)
+        x1 = Input(shape=(input_length,))
+        x2 = Input(shape=(input_length,))
+        
+        # Embed them.
+        E = Embedding(vocab_size, emb_dim, input_length=input_length)
+        z1, z2 = E(x1), E(x2)
+
+        # take a cross product
+
+        # flatten
+
+        # softmax
+
+
+
+
+        z = AveragePooling1D(pool_length=input_length)(z)
+        z = Flatten()(z)
+        z = Dense(output_shape, activation=output_type)(x)
+        return LexicalCrossUnigramModel(input=[x], output=[z], **kwargs)
+

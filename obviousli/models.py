@@ -18,7 +18,7 @@ import ipdb
 import numpy as np
 from keras.models import model_from_json
 from keras.models import Model as KerasModel
-from keras.layers import Input, Embedding, AveragePooling1D, Flatten, Dense
+from keras.layers import Input, Embedding, AveragePooling1D, Flatten, Dense, Activation
 
 from .util import grouper
 from .embeddings import CrossUnigramEmbedder
@@ -165,8 +165,8 @@ class LexicalCrossUnigramModel(EntailmentModel):
         output_shape = cls.output_shape
 
         x = Input(shape=(input_length,))
-        z = Embedding(vocab_size, output_shape, input_length=input_length)(x)
+        z = Embedding(vocab_size+1, output_shape, input_length=input_length)(x)
         z = AveragePooling1D(pool_length=input_length)(z)
         z = Flatten()(z)
-        z = Dense(output_shape, activation=output_type)(x)
+        z = Activation(output_type)(z)
         return LexicalCrossUnigramModel(input=[x], output=[z], **kwargs)

@@ -101,7 +101,7 @@ def do_model_train(args):
     Model = get_model_factory(args.entailment_model)
     # Get embedder
     embedder = Model.embedder().construct(train_data + dev_data)
-    logging.info("Embeddeding data.")
+    logging.info("Embedding data.")
     for state in tqdm(train_data + dev_data): 
         rep = embedder.embed(state)
         state.representation = rep[:args.input_length] + [0] * max(0, args.input_length - len(rep))

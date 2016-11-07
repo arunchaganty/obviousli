@@ -18,7 +18,7 @@ import ipdb
 import numpy as np
 from keras.models import model_from_json
 from keras.models import Model as KerasModel
-from keras.layers import Input, Embedding, AveragePooling1D, Flatten, Dense, Activation
+from keras.layers import Input, Embedding, AveragePooling1D, Flatten, Dense, Activation, Merge, TimeDistributed
 
 from .util import grouper
 from .embeddings import CrossUnigramEmbedder
@@ -169,11 +169,11 @@ class LexicalCrossUnigramModel(EntailmentModel):
         z = AveragePooling1D(pool_length=input_length)(z)
         z = Flatten()(z)
         z = Activation(output_type)(z)
-        return LexicalCrossUnigramModel(input=[x], output=[z], **kwargs)
+        return cls(input=[x], output=[z], **kwargs)
 
 class CrossUnigramModel(EntailmentModel):
     def __init__(self, *args, **kwargs):
-        super(LexicalCrossUnigramModel, self).__init__(*args, **kwargs)
+        super(CrossUnigramModel, self).__init__(*args, **kwargs)
 
     @classmethod
     def embedder(cls):
@@ -195,22 +195,17 @@ class CrossUnigramModel(EntailmentModel):
         # These are two input sentences (source, target)
         x1 = Input(shape=(input_length,))
         x2 = Input(shape=(input_length,))
-        
+
         # Embed them.
-        E = Embedding(vocab_size, emb_dim, input_length=input_length)
+        E = Embedding(vocab_size, emb_dim, input_length=input_length, weights=emb_matrix, trainable=False)
         z1, z2 = E(x1), E(x2)
 
-        # take a cross product
+        # 1 dense layer
+        P = TimeDistributed(Dense(emb_dim, activation='relu'))
+        z1, z2 = P(z1), P(z2)
 
-        # flatten
-
-        # softmax
-
-
-
-
-        z = AveragePooling1D(pool_length=input_length)(z)
+        # add the two layers together (silly)
+        z = Merge([z1, z2], mode='concat')
         z = Flatten()(z)
-        z = Dense(output_shape, activation=output_type)(x)
-        return LexicalCrossUnigramModel(input=[x], output=[z], **kwargs)
-
+        z = Dense(output_shape, activation=output_type)(z)
+        return cls(input=[x1, x2], output=[z], **kwargs)

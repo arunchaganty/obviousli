@@ -96,10 +96,17 @@ class TestAnnotatedSentence(object):
     def test_from_tokens(self):
         text = "This is a test."
         tokens = "This is a test .".split()
+        pos = "DT VBZ DT NN .".split()
         sentence = AnnotatedSentence.from_tokens(text, tokens)
         assert sentence.text == text
         assert len(sentence) == 5
         assert sentence[1].word == "is"
+
+        sentence = AnnotatedSentence.from_tokens(text, tokens, pos)
+        assert sentence.text == text
+        assert len(sentence) == 5
+        assert sentence[1].word == "is"
+        assert sentence[1].pos == "VBZ"
 
 class TestAnnotatedDocument(object):
     #def test_json_to_pb(self, json_dict):

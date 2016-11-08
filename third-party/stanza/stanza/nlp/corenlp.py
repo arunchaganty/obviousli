@@ -344,7 +344,7 @@ class AnnotatedSentence(Sentence, ProtobufBacked):
         self._tokens = [AnnotatedToken.from_pb(tok_pb) for tok_pb in pb.token]
 
     @classmethod
-    def from_tokens(cls, text, toks):
+    def from_tokens(cls, text, toks, pos_toks = None):
         """
         A helper method that allows you to construct an AnnotatedSentence with just token information:
         :param (str) text -- full text of the sentence.
@@ -378,6 +378,7 @@ class AnnotatedSentence(Sentence, ProtobufBacked):
         while char_idx < len(text):
             assert tok_idx < len(toks), "text has more tokens than input"
             tok = toks[tok_idx]
+            pos_tok = pos_toks and pos_toks[tok_idx]
             tok_text = TOK_MAP.get(tok, tok)
             # Scan to the beginning of the token.
             if text[char_idx] != tok_text[0]:
@@ -395,6 +396,7 @@ class AnnotatedSentence(Sentence, ProtobufBacked):
                 token_pb.endChar = char_idx + len(tok_text)
                 token_pb.value = tok
                 token_pb.word = tok
+                if pos_tok is not None: token_pb.pos = pos_tok
                 token_pb.originalText = text[char_idx:char_idx+len(tok_text)]
 
                 buf = ""

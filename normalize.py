@@ -6,6 +6,7 @@ import re
 import csv
 import sys
 import json
+from xml.etree.ElementTree import ElementTree
 from collections import namedtuple
 from tqdm import tqdm
 import logging
@@ -76,6 +77,26 @@ def do_snli(args):
             logging.warning(e.args)
             continue
 
+def do_rte(args):
+    tree = ElementTree(file=args.input)
+    LABELS = {
+        "YES": Truth.TRUE,
+        "NO": Truth.FALSE,
+        "UNKNOWN": Truth.NEUTRAL,
+        }
+
+    for pair in tqdm(tree.findall("pair")):
+        assert pair.get("entailment") in LABELS
+        label = LABELS[pair.get("entailment")]
+        source = pair.findtext("t")
+        target = pair.findtext("h")
+
+        try:
+            state = State.new(source, target, gold_truth=label)
+            args.output.write(json.dumps(state.json) + "\n")
+        except AssertionError as e:
+            logging.warning(e.args)
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='')
@@ -86,6 +107,9 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers()
     command_parser = subparsers.add_parser('snli', help='Read the snli dataset')
     command_parser.set_defaults(func=do_snli)
+
+    command_parser = subparsers.add_parser('rte', help='Read the RTE dataset')
+    command_parser.set_defaults(func=do_rte)
 
     ARGS = parser.parse_args()
     if ARGS.func is None:

@@ -2,6 +2,7 @@
 Normalizes training data format.
 """
 
+import re
 import csv
 import sys
 import json
@@ -16,8 +17,30 @@ def make_tokens(binary_parse):
     """
     Convert a binary parse: ( ( The men ) ( ( are ( fighting ( outside ( a deli ) ) ) ) . ) )
     to [The men are fighting outside a deli .]
+    @returns tuple
     """
-    return binary_parse.replace("(", "").replace(")", "").split()
+    return tuple(binary_parse.replace("(", "").replace(")", "").split())
+
+def make_pos_tokens(typed_parse):
+    """
+    Convert typed parse: (ROOT (S (NP (DT A) (NN person)) (VP (VBZ is) (VP (VBG training) (NP (PRP$ his) (NN horse)) (PP (IN for) (NP (DT a) (NN competition))))) (. .)))
+    into joint sequence of (A person is training his horse for a competition .) and (DT NN VBZ VBG PRP$ NN IN DT NN .).
+
+    @returns (tuple, tuple)
+    """
+    # We only care about the leaves.
+    leaves = re.findall(r'\(([^()]+)\)', typed_parse)
+    pos, words = zip(*map(str.split, leaves))
+    return pos, words
+
+def test_make_pos_tokens():
+    pos, words = make_pos_tokens("(ROOT (S (NP (DT A) (NN person)) (VP (VBZ is) (VP (VBG training) (NP (PRP$ his) (NN horse)) (PP (IN for) (NP (DT a) (NN competition))))) (. .)))")
+    assert pos == tuple("DT NN VBZ VBG PRP$ NN IN DT NN .".split())
+    assert words == tuple("A person is training his horse for a competition .".split())
+
+def make_sentence(text, typed_parse):
+    pos, words = make_pos_tokens(typed_parse)
+    return AnnotatedSentence.from_tokens(text, words, pos)
 
 def make_state(row):
     L = {
@@ -25,8 +48,9 @@ def make_state(row):
         "neutral" : 1,
         "contradiction" : 0,
         }
-    source = AnnotatedSentence.from_tokens(row.sentence1, make_tokens(row.sentence1_binary_parse))
-    target = AnnotatedSentence.from_tokens(row.sentence2, make_tokens(row.sentence2_binary_parse))
+
+    source = make_sentence(row.sentence1, row.sentence1_parse)
+    target = make_sentence(row.sentence2, row.sentence2_parse)
     truth = Truth.TRUE
     gold_truth = Truth(L[row.gold_label])
     return State(source, target, truth, gold_truth)

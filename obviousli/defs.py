@@ -35,7 +35,11 @@ class State(object):
     """
     Represents inference state, with source and target sentences and arbitrary representation.
     """
-    _client = CoreNLPClient(server=config.CORENLP_SERVER, default_annotators=config.CORENLP_ANNOTATORS)
+    __client = None
+    @classmethod
+    def _client(cls):
+        if cls.__client is None:
+            cls.__client = CoreNLPClient(server=config.CORENLP_SERVER, default_annotators=config.CORENLP_ANNOTATORS)
 
     def __init__(self, source, target, truth, gold_truth=None, previous_state_action=None):
         self.source = source
@@ -86,8 +90,8 @@ class State(object):
 
     @classmethod
     def new(cls, source, target, gold_truth=None):
-        source = cls._client.annotate(source)[0]
-        target = cls._client.annotate(target)[0]
+        source = cls._client().annotate(source)[0]
+        target = cls._client().annotate(target)[0]
         assert isinstance(source, AnnotatedSentence)
         assert isinstance(target, AnnotatedSentence)
         return State(source, target, Truth.TRUE, gold_truth=gold_truth)

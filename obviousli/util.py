@@ -12,6 +12,13 @@ from collections import namedtuple, defaultdict, Counter
 import numpy as np
 from numpy import array
 
+def ngrams(toks, n):
+    return ["+".join(toks[i:i+n]) for i in range(len(toks) - n+1)]
+
+def test_ngrams():
+    assert "a b c d a".split() == ngrams("a b c d a".split(), 1)
+    assert "a+b b+c c+d d+a".split() == ngrams("a b c d a".split(), 2)
+
 def edit_distance(l1, l2):
     """
     Computes edit distance between two sequences, l1, l2
@@ -433,3 +440,46 @@ class ConfusionMatrix(object):
 
         print(to_table(data, self.labels + ["micro","macro"], ["label", "acc", "prec", "rec", "f1"]))
 
+def build_multidict(seq):
+    """
+    Build a dictionary of key -> [values] from sequence of (key, value) pairs.
+    """
+    ret = defaultdict(list)
+    for k,v in seq:
+        ret[k].append(v)
+    return ret
+
+def cross_ngrams(ts, ts_, n):
+    def get_pos_dict(xs):
+        ret = defaultdict(list)
+        for i in range(0, len(xs)-n):
+            ret[xs[i+n-1].pos].append("+".join(t.word for t in xs[i:i+n]))
+        return ret
+
+    pos_ts = get_pos_dict(ts)
+    pos_ts_ = get_pos_dict(ts_)
+
+    return ["{}:{}++{}".format(pos,t, t_) for pos in pos_ts.keys() for t in pos_ts[pos] for t_ in pos_ts_[pos]]
+
+def test_cross_ngrams():
+    Token = namedtuple("Token", ["word", "pos"])
+    ts = [Token(l, p) for l, p in zip(
+        "the quick brown fox jump over the lazy dog .".split(),
+        "DT JJ JJ NN VBD IN DT JJ NN .".split()
+        )]
+    ts_ = [Token(l, p) for l, p in zip(
+        "early voting datum unequivocally indicate that Mrs. Clinton will benefit from hispanic turnout .".split(),
+        "RB VBG NNS RB VBZ IN NNP NNP MD VB IN JJ NN .".split()
+        )]
+    assert set(cross_ngrams(ts, ts_,1)) == set(['IN:over++that', 'IN:over++from', 'JJ:quick++hispanic', 'JJ:brown++hispanic', 'JJ:lazy++hispanic', 'NN:fox++turnout', 'NN:dog++turnout'])
+    assert set(cross_ngrams(ts, ts_,2)) == set(['NN:brown+fox++hispanic+turnout', 'NN:lazy+dog++hispanic+turnout', 'IN:jump+over++indicate+that', 'IN:jump+over++benefit+from', 'JJ:the+quick++from+hispanic', 'JJ:quick+brown++from+hispanic', 'JJ:the+lazy++from+hispanic'])
+
+def lexical_overlap(ts, ts_):
+    ts = set(ts)
+    ts_ = set(ts_)
+    return len(ts.intersection(ts_)),  len(ts.intersection(ts_)) / max(len(ts), len(ts_))
+
+def test_lexical_overlap():
+    abs_overlap, rel_overlap = lexical_overlap("a b c d a".split(), "a r e d".split())
+    assert abs_overlap == 2
+    assert abs(rel_overlap - 0.4) < 1e-1

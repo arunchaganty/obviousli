@@ -25,17 +25,6 @@ def printq(queue):
     for score, (state, action) in queue:
         print("{}\t{}\t{}".format(score, state, action))
 
-def do_command(args):
-    reader = csv.reader(args.input, delimiter='\t')
-    writer = csv.writer(args.output, delimiter='\t')
-
-    header = next(reader)
-    assert len(header) > 0, "Invalid header"
-
-    writer.writerow(header)
-    for row in reader:
-        writer.writerow(row)
-
 def do_shell(args):
     pass
 #    action_generator = ActionGenerator([

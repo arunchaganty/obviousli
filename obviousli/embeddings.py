@@ -275,5 +275,5 @@ class LexicalBaselineEmbedder(Embedder):
         @datum: is a sentence (with a tokens method)
         @returns: a sequence of integers corresponding to activated features.
         """
-        return sorted((self.map[k],v) for k,v in self.featurize(state).items())
+        return sorted((self.map[k],v) for k,v in self.featurize(state).items() if k in self.map)
 

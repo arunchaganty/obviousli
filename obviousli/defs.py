@@ -40,6 +40,7 @@ class State(object):
     def _client(cls):
         if cls.__client is None:
             cls.__client = CoreNLPClient(server=config.CORENLP_SERVER, default_annotators=config.CORENLP_ANNOTATORS)
+        return cls.__client
 
     def __init__(self, source, target, truth, gold_truth=None, previous_state_action=None):
         self.source = source

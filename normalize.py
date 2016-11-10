@@ -6,6 +6,7 @@ import re
 import csv
 import sys
 import json
+import gzip
 from xml.etree.ElementTree import ElementTree
 from collections import namedtuple
 from tqdm import tqdm
@@ -13,6 +14,7 @@ import logging
 
 from stanza.nlp.corenlp import AnnotatedSentence
 from obviousli.defs import State, Truth
+from obviousli.io import GzippableFileType
 
 def make_tokens(binary_parse):
     """
@@ -43,18 +45,24 @@ def make_sentence(text, typed_parse):
     pos, words = make_pos_tokens(typed_parse)
     return AnnotatedSentence.from_tokens(text, words, pos)
 
-def make_state(row):
+def make_state(row, do_annotate=False):
     L = {
         "entailment" : 2,
         "neutral" : 1,
         "contradiction" : 0,
         }
 
-    source = make_sentence(row.sentence1, row.sentence1_parse)
-    target = make_sentence(row.sentence2, row.sentence2_parse)
-    truth = Truth.TRUE
-    gold_truth = Truth(L[row.gold_label])
-    return State(source, target, truth, gold_truth)
+    if do_annotate:
+        source = row.sentence1
+        target = row.sentence2
+        gold_truth = Truth(L[row.gold_label])
+        return State.new(source, target, gold_truth)
+    else:
+        source = make_sentence(row.sentence1, row.sentence1_parse)
+        target = make_sentence(row.sentence2, row.sentence2_parse)
+        truth = Truth.TRUE
+        gold_truth = Truth(L[row.gold_label])
+        return State(source, target, truth, gold_truth)
 
 def read_stream(fstream, use_header = True, **kwargs):
     reader = csv.reader(fstream, **kwargs)
@@ -71,7 +79,7 @@ def do_snli(args):
     for row in tqdm(reader):
         if row.gold_label == "-": continue
         try:
-            state = make_state(row)
+            state = make_state(row, args.annotate)
             args.output.write(json.dumps(state.json) + "\n")
         except AssertionError as e:
             logging.warning(e.args)
@@ -100,12 +108,13 @@ def do_rte(args):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('-i', '--input', type=argparse.FileType('r'), default=sys.stdin, help="")
-    parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help="")
+    parser.add_argument('-i', '--input', type=GzippableFileType('rt'), default=sys.stdin, help="")
+    parser.add_argument('-o', '--output', type=GzippableFileType('wt'), default=sys.stdout, help="")
     parser.set_defaults(func=None)
 
     subparsers = parser.add_subparsers()
     command_parser = subparsers.add_parser('snli', help='Read the snli dataset')
+    command_parser.add_argument('-a', '--annotate', action="store_true", help="Call the annotation service to actually annotate this data.")
     command_parser.set_defaults(func=do_snli)
 
     command_parser = subparsers.add_parser('rte', help='Read the RTE dataset')
@@ -117,9 +126,3 @@ if __name__ == "__main__":
         sys.exit(-1)
     else:
         ARGS.func(ARGS)
-
-
-# we have tokens, in the same order as sentence. --> I can use this to
-# reconstruct before, after and that'd be good enough, no?
-# In general, I think it's common to have "here's the full sentence",
-# "here's a set of tokens" -> go play!

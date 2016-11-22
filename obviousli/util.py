@@ -48,31 +48,11 @@ def normalized_edit_distance(l1, l2):
     """
     return edit_distance(l1, l2) / max(len(l1), len(l2))
 
-def process_snli_data(datafile):
-    """
-    Read the SNLI data and return output as ((sentence1, sentence2), label)
-    """
-    Example = namedtuple('Example', ["sentence1", "sentence2", "tokens1", "tokens2", "label"])
-    for line in datafile:
-        obj = json.loads(line)
-        tokens1 = obj["sentence1_binary_parse"].replace(r'(', '').replace(r')', '').split()
-        tokens2 = obj["sentence2_binary_parse"].replace(r'(', '').replace(r')', '').split()
-        label = obj["gold_label"]
-        if label == "-": continue # Skip
-        yield Example(obj["sentence1"], obj["sentence2"], tokens1, tokens2, LABEL_MAP[label])
-
 def pad_zeros(arr, length):
     """
     Pad zeros to make all input fixed length
     """
     return arr[:length] + [0] * max(0, length - len(arr))
-
-LABELS = [
-    "neutral",
-    "contradiction",
-    "entailment",
-    ]
-LABEL_MAP = {label:index for index, label in enumerate(LABELS)}
 
 def __vectorize_data(obj, max_length):
     """

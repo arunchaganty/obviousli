@@ -506,6 +506,15 @@ class AnnotatedSentence(Sentence, ProtobufBacked):
             text.append(tok.word)
         return ''.join(text)
 
+    def text_for_tokens(self, tokens):
+        text = []
+        for i in tokens:
+            tok = self.tokens[i]
+            if i != 0:
+                text.append(tok.before)
+            text.append(tok.word)
+        return ''.join(text)
+
     def pos_tag(self, i):
         return self._tokens[i].pos
 
@@ -682,10 +691,24 @@ class AnnotatedDependencyParseTree(ProtobufBacked):
     def __init__(self, pb):
         self._pb = pb
         self._roots = [r-1 for r in pb.root] # Dependency parses are +1 indexed in the pb.
-        self.graph, self.inv_graph = AnnotatedDependencyParseTree.parse_graph(pb.edge)
+        self.graph, self.inv_graph = AnnotatedDependencyParseTree._parse_graph(pb.edge)
+        self._sentence = None
 
     def __str__(self):
-        return str(self.graph)
+        return "Dep: {}".format(self.text)
+
+    def __repr__(self):
+        return "[Dep: {}]".format(self.text)
+
+    @staticmethod
+    def _parse_graph(edges):
+        graph = defaultdict(list)
+        inv_graph = defaultdict(list)
+        for edge in edges:
+            graph[edge.source-1].append((edge.target-1, edge.dep))
+            inv_graph[edge.target-1].append((edge.source-1, edge.dep))
+
+        return graph, inv_graph
 
     def to_json(self):
         """
@@ -717,6 +740,29 @@ class AnnotatedDependencyParseTree(ProtobufBacked):
                     })
         return edges
 
+    @classmethod
+    def from_graph(cls, graph, roots, sentence=None, language=CoreNLP_pb2.Language.Value('UniversalEnglish')):
+        """
+        Creates a new dependency parse tree PB from the graph structure.
+        """
+        sentence_index = (sentence and sentence.sentenceIndex) or 0
+        pb = CoreNLP_pb2.DependencyGraph()
+        for i in sorted(graph.keys()): # Get all the tokens from the graph.
+            n = pb.node.add()
+            n.sentenceIndex = sentence_index
+            n.index = i+1 # indices are +1 indexed in the PB...
+            for j, l in graph[i]:
+                e = pb.edge.add()
+                e.source = i+1
+                e.target = j+1
+                e.dep = l
+                e.language = language
+        for idx, i in enumerate(roots):
+            pb.root.insert(idx, i+1)
+        dp = AnnotatedDependencyParseTree._from_pb(pb)
+        dp.sentence = sentence
+        return dp
+
     @property
     def sentence(self):
         return self._sentence
@@ -725,25 +771,58 @@ class AnnotatedDependencyParseTree(ProtobufBacked):
     def sentence(self, val):
         self._sentence = val
 
-    @staticmethod
-    def parse_graph(edges):
-        graph = defaultdict(list)
-        inv_graph = defaultdict(list)
-        for edge in edges:
-            graph[edge.source-1].append((edge.target-1, edge.dep))
-            inv_graph[edge.target-1].append((edge.source-1, edge.dep))
-
-        return graph, inv_graph
+    @property
+    def tokens(self):
+        return sorted(set.union(*[self.descendants(i) for i in self.roots]))
 
     @property
     def roots(self):
         return self._roots
 
     def parents(self, i):
+        """
+        Return the parent of this node; guaranteed to only be one.
+        """
         return self.inv_graph[i]
 
     def children(self, i):
         return self.graph[i]
+
+    def ancestors(self, i):
+        """
+        @returns the list of indices of recursive parents for i and [] if no parents.
+        """
+        ret = [i]
+        q = [j for j,_ in self.inv_graph[i]]
+        while len(q) > 0:
+            i = q.pop()
+            parents = [j for j,_ in self.inv_graph[i]]
+            ret += parents
+            q += parents
+        return ret
+
+    def descendants(self, i):
+        """
+        @returns the list of recursive children for i; [] if no children.
+        """
+
+        # Have to de-duplicate because _sometimes_ the parse "tree" is
+        # actually a DAG.kk
+        ret = set([i])
+        q = [i]
+        while len(q) > 0:
+            i = q.pop()
+            children = [j for j,_ in self.graph[i]]
+            q += list(set(children).difference(ret))
+            ret.update(children)
+        return ret
+
+    @property
+    def text(self):
+        """
+        Linearizes the string by printing out tokens in the subtree..
+        """
+        return self.sentence.text_for_tokens(self.tokens)
 
 class AnnotatedEntity(Entity):
     """

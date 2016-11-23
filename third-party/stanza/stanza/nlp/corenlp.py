@@ -788,23 +788,26 @@ class AnnotatedDependencyParseTree(ProtobufBacked):
     def children(self, i):
         return self.graph[i]
 
-    def ancestors(self, i):
+    def ancestors(self, i, stop=None):
         """
         @returns the list of indices of recursive parents for i and [] if no parents.
         """
+        stop = stop or []
+
         ret = [i]
         q = [j for j,_ in self.inv_graph[i]]
         while len(q) > 0:
             i = q.pop()
-            parents = [j for j,_ in self.inv_graph[i]]
+            parents = [j for j,_ in self.inv_graph[i] if j not in stop]
             ret += parents
             q += parents
         return ret
 
-    def descendants(self, i):
+    def descendants(self, i, stop=None):
         """
-        @returns the list of recursive children for i; [] if no children.
+        @returns the list of recursive children for i; [] if no children. Ignore any children in the set @stop
         """
+        stop = stop or []
 
         # Have to de-duplicate because _sometimes_ the parse "tree" is
         # actually a DAG.kk
@@ -812,8 +815,8 @@ class AnnotatedDependencyParseTree(ProtobufBacked):
         q = [i]
         while len(q) > 0:
             i = q.pop()
-            children = [j for j,_ in self.graph[i]]
-            q += list(set(children).difference(ret))
+            children = [j for j,_ in self.graph[i] if j not in stop and j not in ret]
+            q += children
             ret.update(children)
         return ret
 

@@ -7,6 +7,7 @@ NLP primitives.
 import logging
 from copy import deepcopy
 from collections import defaultdict
+from itertools import chain
 
 from stanza.nlp import AnnotatedSentence, AnnotatedDependencyParseTree, CoreNLP_pb2
 
@@ -16,6 +17,9 @@ logger = logging.getLogger(__name__)
 # "find" -- returns tokens that match a dependency label.
 # "drop subtree" -- linked list.
 # "get subtree" -- return string of the subtree.
+
+def get_tokens(graph):
+    return sorted(set(chain(graph.roots, graph.graph.keys(), (i for vs in graph.graph.values() for i, _ in vs))))
 
 # Dependency graphs are represented as an adjacency list.
 def find_edges(dep_graph, label=None, fn=None):
@@ -27,7 +31,11 @@ def find_edges(dep_graph, label=None, fn=None):
     if fn is None and label is not None:
         fn = lambda _, __, l: l.startswith(label)
 
-    for i, edges in dep_graph.graph.items():
+    # Creating a shallow copy of dep_graph because, as a default_dict, it's
+    # possible for a new entry to be added, changing the keys but not
+    # the values.
+    graph = dict(dep_graph.graph)
+    for i, edges in graph.items():
         for j, l in edges:
             if fn(i, j, l):
                 yield (i, j, l)
@@ -46,7 +54,12 @@ def drop_subtree(dep_graph, token_idx):
     for i in dep_graph.descendants(token_idx):
         if graph[i]: del graph[i]
 
+    # TODO: drop punct
+
     new_graph = AnnotatedDependencyParseTree.from_graph(graph, roots)
+
+    assert new_graph.tokens == get_tokens(new_graph)
+
     return to_sentence(new_graph, dep_graph.sentence)
 
 def keep_subtree(dep_graph, token_idx):
@@ -59,11 +72,17 @@ def keep_subtree(dep_graph, token_idx):
     for i in dep_graph.descendants(token_idx):
         graph[i] = list(dep_graph.graph[i])
 
-    # If the root has a 'mark' node, drop it.
-    for mark in [(child, label) for child, label in graph[token_idx] if label == "mark"]:
-        graph[token_idx].remove(mark)
+    # If the root has a 'mark' node, drop it and all its children.
+    for child, label in [(child, label) for child, label in graph[token_idx] if label == "mark"]:
+        for child_ in dep_graph.descendants(child, [token_idx]):
+            del graph[child_]
+        graph[token_idx].remove((child, label))
 
     new_graph = AnnotatedDependencyParseTree.from_graph(graph, roots)
+
+    assert new_graph.tokens == get_tokens(new_graph)
+
+
     return to_sentence(new_graph, dep_graph.sentence)
 
 def to_sentence(dep_graph, sentence):
@@ -86,10 +105,9 @@ def to_sentence(dep_graph, sentence):
         token_map[j] = i
 
     # Update pointers from graph.
-    graph, roots = dep_graph.graph, dep_graph.roots
-    roots = [token_map[j] for j in roots]
-    graph = defaultdict(list, {token_map[n]: [(token_map[j], lbl) for j, lbl in ns] for n, ns in graph.items()})
+    roots = [token_map[j] for j in dep_graph.roots]
+    graph = defaultdict(list, {token_map[n]: [(token_map[j], lbl) for j, lbl in ns] for n, ns in dep_graph.graph.items()})
 
-    dep_graph = AnnotatedDependencyParseTree.from_graph(graph, roots)
-    new_pb.enhancedPlusPlusDependencies.CopyFrom(dep_graph.pb)
+    dep_graph_ = AnnotatedDependencyParseTree.from_graph(graph, roots)
+    new_pb.enhancedPlusPlusDependencies.CopyFrom(dep_graph_.pb)
     return AnnotatedSentence.from_pb(new_pb)

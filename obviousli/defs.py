@@ -58,9 +58,9 @@ class State(object):
 
     def __lt__(self, other):
         if self.source != other.source:
-            return self.source < other.source
+            return str(self.source) < str(other.source)
         elif self.target != other.target:
-            return self.target < other.target
+            return str(self.target) < str(other.target)
         else:
             return self.truth < other.truth
 

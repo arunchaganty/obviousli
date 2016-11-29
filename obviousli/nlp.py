@@ -8,6 +8,7 @@ import logging
 from copy import deepcopy
 from collections import defaultdict
 from itertools import chain
+import heapq
 
 from stanza.nlp import AnnotatedSentence, AnnotatedDependencyParseTree, CoreNLP_pb2
 
@@ -54,13 +55,14 @@ def drop_subtree(dep_graph, token_idx):
     for i in dep_graph.descendants(token_idx):
         if graph[i]: del graph[i]
 
-    # TODO: drop punct
-
+    # TODO(chaganty): drop punct as appropriate.
+    # TODO(chaganty): handle appos.
+    # TODO(chaganty): handle conj.
     new_graph = AnnotatedDependencyParseTree.from_graph(graph, roots)
 
     assert new_graph.tokens == get_tokens(new_graph)
 
-    return to_sentence(new_graph, dep_graph.sentence)
+    return _to_sentence(new_graph, dep_graph.sentence)
 
 def keep_subtree(dep_graph, token_idx):
     """
@@ -75,7 +77,7 @@ def keep_subtree(dep_graph, token_idx):
     # If the root has a 'mark' node, drop it and all its children.
     for child, label in [(child, label) for child, label in graph[token_idx] if label == "mark"]:
         for child_ in dep_graph.descendants(child, [token_idx]):
-            del graph[child_]
+            if graph[child_]: del graph[child_]
         graph[token_idx].remove((child, label))
 
     new_graph = AnnotatedDependencyParseTree.from_graph(graph, roots)
@@ -83,9 +85,9 @@ def keep_subtree(dep_graph, token_idx):
     assert new_graph.tokens == get_tokens(new_graph)
 
 
-    return to_sentence(new_graph, dep_graph.sentence)
+    return _to_sentence(new_graph, dep_graph.sentence)
 
-def to_sentence(dep_graph, sentence):
+def _to_sentence(dep_graph, sentence):
     """
     convert an AnnotatedDependencyTree into a AnnotatedSentence by keeping only the tokens that are a part of the new dep tree.
     """
@@ -111,3 +113,68 @@ def to_sentence(dep_graph, sentence):
     dep_graph_ = AnnotatedDependencyParseTree.from_graph(graph, roots)
     new_pb.enhancedPlusPlusDependencies.CopyFrom(dep_graph_.pb)
     return AnnotatedSentence.from_pb(new_pb)
+
+def _score_mod(source, target):
+    """
+    Score based on Jaccard score of lemma overlap
+    """
+    s = set(source.lemmas)
+    t = set(target.lemmas)
+
+    return len(s.intersection(t))/len(s.union(t))
+
+def _filter_mod(source, target, original_source):
+    """
+    Make sure that s, t pair have as many NNs, JJs and CDs in common as original source.
+    """
+
+    def keep_token(t):
+        return t.pos.startswith("NN") or t.pos.startswith("JJ") or t.pos.startswith("CD")
+
+    nnps_original = set([t.lemma for t in original_source if keep_token(t)])
+    nnps_source = set([t.lemma for t in source if keep_token(t)])
+    nnps_target = set([t.lemma for t in target if keep_token(t)])
+
+    return nnps_original.intersection(nnps_target) == nnps_source.intersection(nnps_target)
+
+def _mod_gen(sent):
+    dp = sent.depparse()
+    for label in ["ccomp", "nmod", "amod", "advmod", "ccomp", "acl", "appos", "advcl"]:
+        for (_, j, _) in find_edges(dp, label=label):
+            yield drop_subtree(dp, j)
+            yield keep_subtree(dp, j)
+
+def simplify(state_):
+    """ Deterministic modification -- recursively simply until you get a
+        sentence with all the named entities between the two entences."""
+
+    candidates = [(-_score_mod(state_.source, state_.target), state_)]
+    visited = set([str(state_.source)])
+
+    best_cost, best_state = 1e10, None
+    while len(candidates) > 0:
+        cost, state = heapq.heappop(candidates)
+        logger.debug("modifying %.2f %s", cost, state)
+
+        # update best tracker
+        if cost < best_cost:
+            best_cost, best_state = cost, state
+
+        # simplify the state.source
+        for mod in _mod_gen(state.source):
+            if _filter_mod(mod, state.target, state_.source):
+                cost, state = -_score_mod(mod, state.target), state.replace(source=mod)
+                if str(state.source) in visited:
+                    logger.debug("already seen %.2f %s", cost, mod)
+                else:
+                    logger.debug("considering %.2f %s", cost, mod)
+                    heapq.heappush(candidates, (cost, state))
+                    visited.add(str(state.source))
+            else:
+                logger.debug("rejected %s", mod)
+        # Trim candidates to top k.
+        logger.debug("beam contains %d elements", len(candidates))
+        candidates = candidates[:5]
+    logger.info("best pair %.2f %d -> %.2f %d %s", -_score_mod(state_.source, state_.target), len(state_.source), best_cost, len(best_state.source), best_state)
+    return best_state
+
